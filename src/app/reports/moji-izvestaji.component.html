@@ -1,0 +1,113 @@
+<div class="page-header">
+  <button class="btn-back" (click)="goBack()">← Nazad</button>
+  <h1>📊 Statistika</h1>
+</div>
+
+<div class="tasks-container">
+  <div class="filter-section">
+    <div class="filter-header">
+      <div>
+        <h3>Parametri za filtriranje</h3>
+        <div class="filter-desc muted">Filtrirajte po predmetu, statusu, pokretaču i datumu.</div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn-reset" (click)="filter = { businessKey: '', processInitiatorId: isTeacherOnly ? currentUsername : '', state: '', fromModified: '', toModified: '' }; reportData = []; hasSearched = false; currentPage = 0; totalPages = 0; totalElements = 0;">Resetuj</button>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Naziv predmeta:</label>
+        <input type="text" [(ngModel)]="filter.businessKey" placeholder="Npr. predmet-2026-1">
+        <div class="helper muted">Možete koristiti deo naziva predmeta za pretragu.</div>
+      </div>
+
+      <div class="form-group">
+        <label>Status procesa:</label>
+        <select [(ngModel)]="filter.state">
+          <option value="">Svi statusi</option>
+          <option value="ACTIVE">Aktivni</option>
+          <option value="COMPLETED">Završeni</option>
+        </select>
+      </div>
+
+      <div class="form-group" *ngIf="isStudentUser">
+        <label>Pokretač (ID):</label>
+        <input type="text" [(ngModel)]="filter.processInitiatorId" placeholder="ID pokretača">
+        <div class="helper muted">Unesite ID korisnika koji je pokrenuo proces.</div>
+      </div>
+
+      <div class="form-group" *ngIf="isAdminUser">
+        <label>Pokretač (ID):</label>
+        <input type="text" [(ngModel)]="filter.processInitiatorId" placeholder="Unesite ID pokretača za filtriranje">
+        <div class="helper muted">Ostavite prazno da vidite sve procese.</div>
+      </div>
+
+      <div class="form-group">
+        <label>Datum od:</label>
+        <input type="date" [(ngModel)]="filter.fromModified">
+      </div>
+
+      <div class="form-group">
+        <label>Datum do:</label>
+        <input type="date" [(ngModel)]="filter.toModified">
+      </div>
+    </div>
+
+    <div class="actions">
+      <div class="spacer"></div>
+      <div class="actions-right">
+        <button class="btn-light" (click)="generateReport()" [disabled]="isLoading">
+          {{ isLoading ? 'Učitavanje...' : '🔍 Generiši Izveštaj' }}
+        </button>
+        <button class="btn-excel" (click)="exportToExcel()" *ngIf="reportData.length > 0">
+          📥 Preuzmi Excel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div class="results-section" *ngIf="hasSearched && !isLoading">
+    <h3 *ngIf="reportData.length > 0">Pronađeno procesa: {{ totalElements }}</h3>
+    
+    <div *ngIf="reportData.length === 0" class="empty-state">
+      <div class="empty-icon">📉</div>
+      <p>Nema pronađenih podataka za unete parametre.</p>
+    </div>
+
+    <table class="report-table" *ngIf="reportData.length > 0">
+      <thead>
+        <tr>
+          <th>ID Procesa</th>
+          <th>Predmet (Ključ)</th>
+          <th>Status</th>
+          <th>Pokretač</th>
+          <th>Datum kreiranja</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of reportData">
+          <td>{{ item.camundaInstanceId || item.processInstanceHistoryId }}</td>
+          <td>{{ item.businessKey || item.processDefinitionKey || item.processDefinitionId }}</td>
+          <td>
+            <span class="status-badge" [class]="'status-' + (item.state | lowercase)">
+              {{ translateStatus(item.state) }}
+            </span>
+          </td>
+          <td>{{ item.startUserId || item.processInitiatorId || 'Nepoznato' }}</td>
+          <td>{{ (item.startTime || item.createdAt) | date:'dd.MM.yyyy HH:mm' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button class="prev" (click)="previousPage()" [disabled]="currentPage <= 0">‹ Prethodna</button>
+      <span class="page-info">Strana {{ currentPage + 1 }} / {{ totalPages }}</span>
+      <button class="primary next" (click)="nextPage()" [disabled]="currentPage >= totalPages - 1">Sledeća ›</button>
+    </div>
+  </div>
+</div>

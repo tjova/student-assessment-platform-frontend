@@ -1,0 +1,42 @@
+<div class="home-container">
+  <div class="welcome-section">
+    <h1>🎓 Dobrodošli u sistem!</h1>
+    <p class="welcome-text">Izaberite opciju ispod na osnovu vaše uloge</p>
+  </div>
+
+  
+  <div class="role-section" *ngIf="isProfessor">
+    <div class="role-card professor-card">
+      <div class="role-icon">👨‍🏫</div>
+      <h2>Nastavnik</h2>
+      <p class="role-description">Upravljajte aktivnim predmetima i procesima</p>
+      <a routerLink="/aktivni-predmeti" class="btn-role-action">
+        Idi na aktivne predmete
+      </a>
+    </div>
+  </div>
+
+  
+  <div class="role-section" *ngIf="isStudent">
+    <div class="role-card student-card">
+      <div class="role-icon">👨‍🎓</div>
+      <h2>Student</h2>
+      <p class="role-description">Pregledajte i završite dodeljene zadatke</p>
+      <a routerLink="/moji-zadaci" class="btn-role-action">
+        Idi na moje zadatke
+      </a>
+    </div>
+  </div>
+
+  
+  <div class="debug-section" *ngIf="userRoles.length > 0">
+    <details>
+      <summary>Vaše uloge</summary>
+      <div class="debug-roles">
+        <span class="role-badge" *ngFor="let role of userRoles">
+          {{ role }}
+        </span>
+      </div>
+    </details>
+  </div>
+</div>

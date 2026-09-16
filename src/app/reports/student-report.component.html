@@ -1,0 +1,107 @@
+<div class="page-header">
+  <button class="btn-back" (click)="goBack()">← Nazad</button>
+  <h1>📊 Statistika</h1>
+</div>
+
+<div class="tasks-container">
+  <div class="filter-section">
+    <div class="filter-header">
+      <div>
+        <h3>Parametri za filtriranje</h3>
+        <div class="filter-desc muted">Prikazuju se samo zadaci koji su Vam dodeljeni.</div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn-reset" (click)="resetFilter()">Resetuj</button>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Naziv procesa:</label>
+        <input type="text" [(ngModel)]="filter.businessKey" placeholder="Pretraga po nazivu procesa">
+      </div>
+
+      <div class="form-group">
+        <label>Naziv zadatka:</label>
+        <select [(ngModel)]="filter.taskName">
+          <option value="">Svi zadaci</option>
+          <option value="Submit paper">Predaj rad</option>
+          <option value="Resubmit paper">Ponovo predaj rad</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Status zadatka:</label>
+        <select [(ngModel)]="filter.state">
+          <option value="">Svi statusi</option>
+          <option value="ACTIVE">Aktivni</option>
+          <option value="COMPLETED">Završeni</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Datum od:</label>
+        <input type="date" [(ngModel)]="filter.fromModified">
+      </div>
+
+      <div class="form-group">
+        <label>Datum do:</label>
+        <input type="date" [(ngModel)]="filter.toModified">
+      </div>
+    </div>
+
+    <div class="actions">
+      <div class="spacer"></div>
+      <div class="actions-right">
+        <button class="btn-light" (click)="generateReport()" [disabled]="isLoading">
+          {{ isLoading ? 'Učitavanje...' : '🔍 Generiši Izveštaj' }}
+        </button>
+        <button class="btn-excel" (click)="exportToExcel()" *ngIf="reportData.length > 0">
+          📥 Preuzmi Excel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
+
+  <div class="results-section" *ngIf="hasSearched && !isLoading">
+    <h3 *ngIf="reportData.length > 0">Pronađeno zadataka: {{ totalElements }}</h3>
+
+    <div *ngIf="reportData.length === 0" class="empty-state">
+      <div class="empty-icon">📉</div>
+      <p>Nema pronađenih podataka za unete parametre.</p>
+    </div>
+
+    <table class="report-table" *ngIf="reportData.length > 0">
+      <thead>
+        <tr>
+          <th>Naziv zadatka</th>
+          <th>ID Procesa</th>
+          <th>Status</th>
+          <th>Datum pokretanja</th>
+          <th>Datum završetka</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of reportData">
+          <td>{{ translateTaskName(item.taskName || item.name || '—') }}</td>
+          <td>{{ item.processInstanceId || item.processInstanceHistoryId || '—' }}</td>
+          <td>
+            <span class="status-badge" [class]="'status-' + (item.state || item.status | lowercase)">
+              {{ translateStatus(item.state || item.status) }}
+            </span>
+          </td>
+          <td>{{ (item.startTime || item.created) | date:'dd.MM.yyyy HH:mm' }}</td>
+          <td>{{ (item.completedAt || item.endTime) ? ((item.completedAt || item.endTime) | date:'dd.MM.yyyy HH:mm') : '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button class="prev" (click)="previousPage()" [disabled]="currentPage <= 0">‹ Prethodna</button>
+      <span class="page-info">Strana {{ currentPage + 1 }} / {{ totalPages }}</span>
+      <button class="primary next" (click)="nextPage()" [disabled]="currentPage >= totalPages - 1">Sledeća ›</button>
+    </div>
+  </div>
+</div>

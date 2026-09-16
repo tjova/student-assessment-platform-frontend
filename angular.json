@@ -67,7 +67,11 @@
               "buildTarget": "master-rad:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "open": true,
+            "proxyConfig": "proxy.conf.js"
+          }
         },
         "test": {
           "builder": "@angular/build:unit-test"

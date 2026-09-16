@@ -1,0 +1,507 @@
+
+<div class="page-header">
+  <h1>🎓 Upravljanje predmetima</h1>
+</div>
+
+
+<div class="main-layout">
+  
+  <div class="content-area">
+    
+    <div class="tab-navigation">
+      <button
+        class="tab-button"
+        [class.active]="activeTab === 'processes'"
+        (click)="switchTab('processes')"
+      >
+        <span class="tab-icon">📋</span>
+        <span class="tab-label">Predmeti</span>
+      </button>
+      <button
+        class="tab-button"
+        [class.active]="activeTab === 'tasks'"
+        (click)="switchTab('tasks')"
+      >
+        <span class="tab-icon">✓</span>
+        <span class="tab-label">Zadaci</span>
+      </button>
+      <button
+        class="tab-button users-button"
+        (click)="openUsersModal()"
+        title="Korisnici"
+      >
+        <span class="tab-icon">👥</span>
+        <span class="tab-label">Korisnici</span>
+      </button>
+      <button
+        class="tab-button reports-button"
+        (click)="goToReports()"
+        title="Statistika"
+      >
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">Statistika</span>
+      </button>
+    </div>
+
+    
+    <div class="tab-content" *ngIf="activeTab === 'processes'">
+      <div class="process-container">
+
+        
+        <div class="view-tabs">
+          <button class="view-tab" [class.active]="processView === 'active'" (click)="switchProcessView('active')">
+            Aktivni predmeti
+          </button>
+          <button class="view-tab" [class.active]="processView === 'history'" (click)="switchProcessView('history')">
+            Istorija
+          </button>
+        </div>
+
+        
+        <ng-container *ngIf="processView === 'active'">
+          <div *ngIf="isLoading" class="loading-message">Učitavanje predmeta...</div>
+
+          <div *ngIf="errorMessage && activeTab === 'processes'" class="error-message">{{ errorMessage }}</div>
+
+          <table class="styled-table" *ngIf="!isLoading && activeProcesses.length > 0">
+            <thead>
+              <tr>
+                <th>ID Predmeta</th>
+                <th>Predmet</th>
+                <th>Inicijator</th>
+                <th>Datum pokretanja</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let process of activeProcesses"
+                class="clickable-row"
+                (click)="viewProcessDetails(process)"
+                [title]="'Kliknite za detalje procesa'"
+              >
+                <td>{{ process.processInstanceHistoryId }}</td>
+                <td>{{ process.businessKey || process.processDefinitionKey }}</td>
+                <td>{{ process.processInitiatorId || 'Nepoznat' }}</td>
+                <td>{{ process.startTime ? (process.startTime | date:'dd.MM.yyyy HH:mm') : 'Nema datuma' }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="pagination" *ngIf="!isLoading && processTotalPages > 1">
+            <button class="prev" (click)="previousProcessPage()" [disabled]="processPage <= 0">‹ Prethodna</button>
+            <span class="page-info">Strana {{ processPage + 1 }} / {{ processTotalPages }}</span>
+            <button class="primary next" (click)="nextProcessPage()" [disabled]="processPage >= processTotalPages - 1">Sledeća ›</button>
+          </div>
+
+          <div *ngIf="!isLoading && !errorMessage && activeProcesses.length === 0" class="empty-state">
+            Trenutno nema aktivnih predmeta.
+          </div>
+        </ng-container>
+
+        
+        <ng-container *ngIf="processView === 'history'">
+          <div *ngIf="isLoadingHistory" class="loading-message">Učitavanje istorije...</div>
+
+          <table class="styled-table" *ngIf="!isLoadingHistory && historyProcesses.length > 0">
+            <thead>
+              <tr>
+                <th>ID Predmeta</th>
+                <th>Predmet</th>
+                <th>Inicijator</th>
+                <th>Datum pokretanja</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let process of historyProcesses"
+                class="clickable-row"
+                (click)="viewProcessDetails(process)"
+                [title]="'Kliknite za detalje procesa'"
+              >
+                <td>{{ process.processInstanceHistoryId }}</td>
+                <td>{{ process.businessKey || process.processDefinitionKey }}</td>
+                <td>{{ process.processInitiatorId || 'Nepoznat' }}</td>
+                <td>{{ process.startTime ? (process.startTime | date:'dd.MM.yyyy HH:mm') : 'Nema datuma' }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="pagination" *ngIf="!isLoadingHistory && historyTotalPages > 1">
+            <button class="prev" (click)="previousHistoryPage()" [disabled]="historyPage <= 0">‹ Prethodna</button>
+            <span class="page-info">Strana {{ historyPage + 1 }} / {{ historyTotalPages }}</span>
+            <button class="primary next" (click)="nextHistoryPage()" [disabled]="historyPage >= historyTotalPages - 1">Sledeća ›</button>
+          </div>
+
+          <div *ngIf="!isLoadingHistory && historyProcesses.length === 0" class="empty-state">
+            Nema završenih predmeta.
+          </div>
+        </ng-container>
+
+      </div>
+    </div>
+
+    
+    <div class="tab-content" *ngIf="activeTab === 'tasks'">
+      <div *ngIf="isProfessor; else taskTable">
+        <app-student-tasks [showAll]="true" [initiatorFilter]="isTeacher ? currentUsername : null"></app-student-tasks>
+      </div>
+
+      <ng-template #taskTable>
+        <div class="process-container">
+          <div class="process-header">
+            <h2>Svi aktivni zadaci</h2>
+          </div>
+
+          <div *ngIf="isLoading" class="loading-message">
+            Učitavanje zadataka...
+          </div>
+
+          <div class="tasks-list" *ngIf="!isLoading && activeTasks.length > 0" style="padding: 20px;">
+            <div
+              *ngFor="let task of activeTasks"
+              class="task-item"
+              [class.task-item-completed]="task.status === 'completed'"
+              (click)="openTaskDetails(task)"
+            >
+              <div class="task-item-header">
+                <strong class="task-link">{{ translateTaskName(task.name) }}</strong>
+                <span class="task-status-badge">{{ translateStatus(task.status) }}</span>
+              </div>
+              <div class="task-item-details">
+                <div *ngIf="task.created">
+                  <strong>Datum pokretanja:</strong> {{ task.created | date:'dd.MM.yyyy HH:mm' }}
+                </div>
+                <div>
+                  <strong>Dodeljenost:</strong> {{ task.assignee || '—' }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pagination" *ngIf="!isLoading && taskTotalPages > 1">
+            <button class="prev" (click)="previousTaskPage()" [disabled]="taskPage <= 0">‹ Prethodna</button>
+            <span class="page-info">Strana {{ taskPage + 1 }} / {{ taskTotalPages }}</span>
+            <button class="primary next" (click)="nextTaskPage()" [disabled]="taskPage >= taskTotalPages - 1">Sledeća ›</button>
+          </div>
+
+          <div *ngIf="!isLoading && activeTasks.length === 0" class="empty-state">
+            Trenutno nema aktivnih zadataka.
+          </div>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+  
+  <div class="start-process-section">
+    <div class="start-process-card">
+      <h3>Započni proces ocenjivanja za novi predmet</h3>
+      <p>Kliknite na dugme ispod da pokrenete novi proces u sistemu</p>
+      <button class="btn-start-process" (click)="openStartProcessModal()">
+        + Započni proces
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" *ngIf="showStartProcessModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Započni novi proces</h3>
+      <button class="btn-close" (click)="closeStartProcessModal()" [disabled]="isSubmittingForm">
+        ✕
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div *ngIf="formErrorMessage" class="form-error-message">
+        {{ formErrorMessage }}
+      </div>
+
+      <div *ngIf="formSuccessMessage" class="form-success-message">
+        {{ formSuccessMessage }}
+      </div>
+
+      <form (ngSubmit)="submitStartProcess()" [ngClass]="{ 'form-submitting': isSubmittingForm }">
+        <div class="form-group">
+          <label for="processDefinitionKey">Definicija procesa:</label>
+          <select
+            id="processDefinitionKey"
+            [(ngModel)]="startProcessForm.processDefinitionKey"
+            name="processDefinitionKey"
+            [disabled]="isSubmittingForm || isLoadingDefinitions"
+            required
+          >
+            <option value="" disabled>
+              {{ isLoadingDefinitions ? 'Učitavanje...' : 'Odaberite definiciju procesa' }}
+            </option>
+            <option *ngFor="let def of processDefinitions" [value]="def.id || def.key">
+              {{ def.name || def.key }} (v{{ def.version }})
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="processName">Naziv predmeta / domaćeg zadatka:</label>
+          <input
+            type="text"
+            id="processName"
+            [(ngModel)]="startProcessForm.processName"
+            name="processName"
+            placeholder="npr. Matematika I, Uvod u programiranje..."
+            [disabled]="isSubmittingForm"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="studentIds">Studenti:</label>
+          <button
+            type="button"
+            id="studentIds"
+            class="student-dropdown-trigger"
+            [class.open]="isStudentDropdownOpen"
+            (click)="toggleStudentDropdown()"
+            [disabled]="isSubmittingForm || isLoadingUsers"
+          >
+            <span>
+              {{ startProcessForm.studentIds.length > 0
+                ? 'Izabrano studenata: ' + startProcessForm.studentIds.length
+                : (isLoadingUsers ? 'Učitavanje studenata...' : 'Izaberite studente') }}
+            </span>
+            <span class="student-dropdown-arrow">▾</span>
+          </button>
+          <div class="student-dropdown" *ngIf="isStudentDropdownOpen">
+            <label
+              class="student-option"
+              *ngFor="let student of studentUsers"
+              [class.selected]="isStudentSelected(student)"
+            >
+              <input
+                type="checkbox"
+                [checked]="isStudentSelected(student)"
+                [disabled]="isSubmittingForm"
+                (change)="toggleStudentSelection(student)"
+              />
+              <span>
+                {{ student.username || student.userName || student.login || 'Student' }}
+                ({{ getStudentId(student) }})
+              </span>
+            </label>
+          </div>
+          <div *ngIf="!isLoadingUsers && studentUsers.length === 0" class="form-hint">
+            Nema dostupnih studenata.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="documentFile">Priložiti dokument:</label>
+          <input
+            type="file"
+            id="documentFile"
+            (change)="onFileSelected($event)"
+            [disabled]="isSubmittingForm"
+            accept=".pdf,.doc,.docx,.xlsx,.xls,.txt,.jpg,.jpeg,.png"
+          />
+          <div *ngIf="selectedFileName" class="file-selected-info">
+            ✓ Odabran fajl: {{ selectedFileName }}
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-cancel"
+            (click)="closeStartProcessModal()"
+            [disabled]="isSubmittingForm"
+          >
+            Otkaži
+          </button>
+          <button
+            type="submit"
+            class="btn-submit"
+            [disabled]="isStartProcessFormInvalid"
+          >
+            {{ isSubmittingForm ? 'Pokretanje...' : 'Započni proces' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" *ngIf="selectedProcessWithTasks" (click)="closeProcessDetailsModal()">
+  <div class="process-details-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>📋 Detalji Procesa</h3>
+      <button class="btn-close" (click)="closeProcessDetailsModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div *ngIf="isLoadingProcessDetails" class="loading-spinner">
+        Učitavanje detalja...
+      </div>
+
+      <div *ngIf="!isLoadingProcessDetails && selectedProcessWithTasks" class="process-details-content">
+        
+        <div class="details-section">
+          <h4>Informacije o Procesu</h4>
+          <div class="detail-item">
+            <strong>Naziv predmeta:</strong>
+            <span>{{ selectedProcessWithTasks.processInstance?.businessKey || '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Inicijator:</strong>
+            <span>{{ selectedProcessWithTasks.processInstance?.processInitiatorId || '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Datum pokretanja:</strong>
+            <span>{{ selectedProcessWithTasks.processInstance?.startTime ? (selectedProcessWithTasks.processInstance.startTime | date:'dd.MM.yyyy HH:mm') : '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Status:</strong>
+            <span>{{ translateStatus(selectedProcessWithTasks.processInstance?.state) }}</span>
+          </div>
+        </div>
+
+        
+        <div class="details-section" *ngIf="selectedProcessWithTasks.tasks && selectedProcessWithTasks.tasks.length > 0">
+          <h4>Povezani Zadaci ({{ selectedProcessWithTasks.tasks.length }})</h4>
+          <div class="tasks-list">
+            <div *ngFor="let task of selectedProcessWithTasks.tasks" class="task-item" (click)="openTaskDetails(task)">
+              <div class="task-item-header">
+                <strong class="task-link">{{ translateTaskName(task.taskName) }}</strong>
+                <span class="task-status-badge">{{ translateStatus(task.state) }}</span>
+              </div>
+              <div class="task-item-details">
+                <div>
+                  <strong>Datum pokretanja:</strong>
+                  {{ task.startTime ? (task.startTime | date:'dd.MM.yyyy HH:mm') : '—' }}
+                </div>
+                <div>
+                  <strong>Dodeljenost:</strong> {{ task.assignee || '—' }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="details-section" *ngIf="!selectedProcessWithTasks.tasks || selectedProcessWithTasks.tasks.length === 0">
+          <p class="empty-tasks">Nema povezanih zadataka za ovaj proces.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-close-modal" (click)="closeProcessDetailsModal()">
+        Zatvori
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="selectedTaskDetail !== null" (click)="closeTaskDetailModal()">
+  <div class="process-details-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>📋 Detalji Zadatka</h3>
+      <button class="btn-close" (click)="closeTaskDetailModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div *ngIf="isLoadingTaskDetail" class="loading-spinner">
+        Učitavanje detalja...
+      </div>
+
+      <div *ngIf="!isLoadingTaskDetail && selectedTaskDetail" class="process-details-content">
+        <div class="details-section">
+          <div class="detail-item" *ngIf="selectedTaskDetail.studentId">
+            <strong>Student:</strong>
+            <span>{{ selectedTaskDetail.studentId }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Naziv zadatka:</strong>
+            <span>{{ translateTaskName(selectedTaskDetail.name) }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Dodeljeno:</strong>
+            <span>{{ selectedTaskDetail.assignee || '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Identifikator zadatka:</strong>
+            <span>{{ selectedTaskDetail.id || '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Datum kreiranja:</strong>
+            <span>{{ selectedTaskDetail.startTime ? (selectedTaskDetail.startTime | date:'dd.MM.yyyy HH:mm:ss') : '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Datum završetka:</strong>
+            <span>{{ selectedTaskDetail.endTime ? (selectedTaskDetail.endTime | date:'dd.MM.yyyy HH:mm:ss') : '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Identifikator predmeta:</strong>
+            <span>{{ selectedTaskDetail.processInstanceId || '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <strong>Status:</strong>
+            <span>{{ translateStatus(selectedTaskDetail.status) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button
+        *ngIf="selectedTaskAttachmentId"
+        class="btn-download-doc"
+        (click)="downloadTaskAttachment()"
+        [disabled]="isDownloadingAttachment"
+      >
+        {{ isDownloadingAttachment ? 'Preuzimanje...' : '📥 Preuzmi dokument' }}
+      </button>
+      <button class="btn-close-modal" (click)="closeTaskDetailModal()">
+        Zatvori
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" *ngIf="showUsersModal" (click)="closeUsersModal()">
+  <div class="modal-content users-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Korisnici</h3>
+      <button class="btn-close" (click)="closeUsersModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div *ngIf="isLoadingUsers" class="loading-message">Učitavanje korisnika...</div>
+      <div *ngIf="usersError" class="error-message">{{ usersError }}</div>
+
+      <table class="styled-table" *ngIf="!isLoadingUsers && users && users.length > 0">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Korisničko ime</th>
+            <th>Rola</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let u of users">
+            <td>{{ u.id || u.userId || u.user_id || '-' }}</td>
+            <td>{{ u.username || u.userName || u.login || '-' }}</td>
+            <td>{{ u.role || (u.roles ? (u.roles.join ? u.roles.join(', ') : u.roles) : '-') }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div *ngIf="!isLoadingUsers && (!users || users.length === 0)" class="empty-state">Nema korisnika za prikaz.</div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-close-modal" (click)="closeUsersModal()">Zatvori</button>
+    </div>
+  </div>
+</div>

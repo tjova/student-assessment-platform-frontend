@@ -14,10 +14,12 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render title', async () => {
+  it('should render the application header', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, master-rad');
+    expect(compiled.querySelector('.header-title')?.textContent ?? '').toContain(
+      'Sistem za upravljanje predmetima'
+    );
   });
 });

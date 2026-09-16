@@ -1,0 +1,29 @@
+<div class="task-detail-container">
+  <button class="btn-back" (click)="back()">← Nazad</button>
+
+  <div *ngIf="isLoading" class="loading-spinner">Učitavanje...</div>
+
+  <div *ngIf="error" class="error-message">{{ error }}</div>
+
+  <div *ngIf="!isLoading && taskHistory" class="history-details">
+    <h2>Detalji zadatka: {{ translateTaskName(taskHistory?.taskName || taskHistory?.id || taskId) }}</h2>
+
+    <div class="history-item"><strong>Naziv zadatka:</strong> <span>{{ translateTaskName(taskHistory.taskName) }}</span></div>
+    <div class="history-item"><strong>Dodeljeno:</strong> <span>{{ taskHistory.assignee || '—' }}</span></div>
+    <div class="history-item"><strong>Identifikator zadatka:</strong> <span>{{ taskHistory.id || '—' }}</span></div>
+    <div class="history-item"><strong>Datum kreiranja:</strong> <span>{{ taskHistory.startTime ? (taskHistory.startTime | date:'dd.MM.yyyy HH:mm:ss') : '—' }}</span></div>
+    <div class="history-item"><strong>Datum završetka:</strong> <span>{{ taskHistory.endTime ? (taskHistory.endTime | date:'dd.MM.yyyy HH:mm:ss') : '—' }}</span></div>
+    <div class="history-item"><strong>Identifikator predmeta:</strong> <span>{{ taskHistory.processInstanceHistoryId || taskHistory.processInstanceId || '—' }}</span></div>
+    <div class="history-item"><strong>Status:</strong> <span>{{ translateStatus(taskHistory.state || taskHistory.status) }}</span></div>
+
+    <div class="history-item" *ngIf="taskHistory.formData">
+      <strong>Unešeni Podaci:</strong>
+      <div class="form-data">
+        <div *ngFor="let item of (taskHistory.formData | keyvalue)" class="data-item">
+          <span class="data-key">{{ item.key }}:</span>
+          <span class="data-value">{{ item.value }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,248 @@
+<div class="tasks-container">
+  <div class="tasks-header">
+    <h2>📝 Spisak zadataka </h2>
+    <button *ngIf="isStudent" class="btn-reports" (click)="goToReports()">📊 Statistika</button>
+  </div>
+
+  
+  <div class="view-tabs">
+    <button class="view-tab" [class.active]="currentView === 'active'" (click)="switchView('active')">
+      Aktivni zadaci
+    </button>
+    <button class="view-tab" [class.active]="currentView === 'history'" (click)="switchView('history')">
+      Istorija
+    </button>
+  </div>
+
+  <div *ngIf="isLoading" class="loading-message">
+    Učitavanje zadataka...
+  </div>
+
+  <div *ngIf="errorMessage && !isLoading" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="!isLoading && assignedTasks.length > 0" class="tasks-list">
+    <div
+      *ngFor="let task of assignedTasks"
+      class="task-item"
+      [class.task-item-completed]="task.status === 'completed'"
+      (click)="viewTaskHistory(task)"
+    >
+      <div class="task-item-header">
+        <strong class="task-link">{{ translateTaskName(task.taskName || task.name) }}</strong>
+        <span class="task-status-badge">{{ translateStatus(task.status) }}</span>
+      </div>
+      <div class="task-item-details">
+        <div *ngIf="task.startTime || task.created">
+          <strong>Datum pokretanja:</strong>
+          {{ (task.startTime || task.created) | date:'dd.MM.yyyy HH:mm' }}
+        </div>
+        <div>
+          <strong>Dodeljen:</strong> {{ task.claimedBy || $any(task).assignee || '—' }}
+        </div>
+      </div>
+      <div class="task-loading-indicator" *ngIf="task.isLoadingHistory">Učitavanje...</div>
+    </div>
+  </div>
+
+  <div class="pagination" *ngIf="!isLoading && taskTotalPages > 1">
+    <button class="prev" (click)="previousPage()" [disabled]="taskPage <= 0">‹ Prethodna</button>
+    <span class="page-info">Strana {{ taskPage + 1 }} / {{ taskTotalPages }}</span>
+    <button class="primary next" (click)="nextPage()" [disabled]="taskPage >= taskTotalPages - 1">Sledeća ›</button>
+  </div>
+
+  
+  <div class="task-history-modal" *ngIf="selectedTaskHistory()" (click)="closeHistoryModal()">
+    <div class="history-overlay"></div>
+    <div class="history-panel" (click)="$event.stopPropagation()">
+      <div class="history-header">
+        <h3>Detalji Zadatka</h3>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button
+            *ngIf="selectedTask() && selectedTask()!.status !== 'completed' && !selectedTask()!.showForm"
+            class="btn-show-form"
+            (click)="showSelectedTaskForm()"
+          >
+            Unesi podatke
+          </button>
+          <button class="btn-close" (click)="closeHistoryModal()">✕</button>
+        </div>
+      </div>
+
+      <div class="history-content">
+        <div *ngIf="isLoadingTaskHistory()" class="loading-spinner">
+          Učitavanje...
+        </div>
+
+        <div *ngIf="!isLoadingTaskHistory() && selectedTaskHistory()" class="history-details">
+          <div class="history-item" *ngIf="selectedTaskAttachmentId()">
+            <strong>Prilog:</strong>
+            <button class="btn-download" (click)="downloadAttachment()" [disabled]="isDownloadingAttachment()">
+              {{ isDownloadingAttachment() ? 'Preuzimanje...' : 'Preuzmi prilog' }}
+            </button>
+          </div>
+
+          <div class="history-item" *ngIf="selectedTaskHistory()!.studentId">
+            <strong>Student:</strong>
+            <span>{{ selectedTaskHistory()!.studentId }}</span>
+          </div>
+
+          <div class="history-item">
+            <strong>Naziv zadatka:</strong>
+            <span>{{ translateTaskName(selectedTaskHistory()!.name) }}</span>
+          </div>
+
+          <div class="history-item">
+            <strong>Dodeljeno:</strong>
+            <span>{{ selectedTaskHistory()!.claimedBy || '—' }}</span>
+          </div>
+
+          <div class="history-item">
+            <strong>Identifikator zadatka:</strong>
+            <span>{{ selectedTaskHistory()!.id || '—' }}</span>
+          </div>
+
+          <div class="history-item">
+            <strong>Datum kreiranja:</strong>
+            <span>{{ selectedTaskHistory()!.created ? (selectedTaskHistory()!.created | date:'dd.MM.yyyy HH:mm:ss') : '—' }}</span>
+          </div>
+
+          <div class="history-item">
+            <strong>Datum završetka:</strong>
+            <span>{{ selectedTaskHistory()!.completedAt ? (selectedTaskHistory()!.completedAt | date:'dd.MM.yyyy HH:mm:ss') : '—' }}</span>
+          </div>
+
+          <div class="history-item">
+            <strong>Identifikator predmeta:</strong>
+            <span>{{ selectedTaskHistory()!.processInstanceId || '—' }}</span>
+          </div>
+
+          <div class="history-item">
+            <strong>Status:</strong>
+            <span>{{ translateStatus(selectedTaskHistory()!.status) }}</span>
+          </div>
+
+          <div class="history-item">
+            <strong>Unešeni Podaci:</strong>
+            <div class="form-data">
+              <div *ngFor="let item of getFilteredFormData(selectedTaskHistory()!.formData)" class="data-item">
+                <span class="data-key">{{ item.key }}:</span>
+                <span class="data-value">{{ item.value }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        
+        <ng-container *ngIf="selectedTask() && selectedTask()!.status !== 'completed'">
+          <div class="input-form" *ngIf="selectedTask()!.showForm">
+            <div *ngIf="isStudent; else teacherFormModal">
+              <div class="task-info-rows" *ngIf="!isTaskType(selectedTask()!, 'task1') && !isTaskType(selectedTask()!, 'task3')">
+                <div class="task-info-row">
+                  <span class="task-info-label">Naziv zadatka</span>
+                  <span class="task-info-value">{{ translateTaskName(selectedTask()!.name) }}</span>
+                </div>
+                <div class="task-info-row">
+                  <span class="task-info-label">Dodeljen</span>
+                  <span class="task-info-value">{{ selectedTask()!.claimedBy || '—' }}</span>
+                </div>
+              </div>
+
+              <div class="file-upload-row">
+                <label class="file-label">Priložite datoteku:</label>
+                <input type="file" (change)="onFileSelected(selectedTask()!, $event)" />
+                <div class="selected-file" *ngIf="selectedTask()!.uploadedFile">{{ selectedTask()!.uploadedFile!.name }}</div>
+              </div>
+
+              <div *ngIf="isTaskType(selectedTask()!, 'task2')" class="task2-inputs">
+                <div class="task-info-row">
+                  <span class="task-info-label">Bodovi</span>
+                  <input type="number" min="0" [(ngModel)]="$any(selectedTask()!.formInput)['points']" />
+                </div>
+                <div class="task-info-row">
+                  <span class="task-info-label">Komentar</span>
+                  <textarea rows="3" [(ngModel)]="$any(selectedTask()!.formInput)['comment']" placeholder="Unesite komentar..."></textarea>
+                </div>
+                <div class="task-info-row">
+                  <span class="task-info-label">Email studenta</span>
+                  <input type="text" [(ngModel)]="$any(selectedTask()!.formInput)['email']" placeholder="Unesite email studenta..." />
+                </div>
+              </div>
+
+              <div class="form-footer">
+                <button type="button" class="btn-cancel" (click)="cancelForm(selectedTask()!)" [disabled]="selectedTask()!.isSubmittingForm ?? false">Otkaži</button>
+                <button type="button" class="btn-complete"
+                  (click)="completeTask1(selectedTask()!)"
+                  [disabled]="(selectedTask()!.isSubmittingForm ?? false) || (!isTaskType(selectedTask()!, 'task2') && !selectedTask()!.uploadedFile)">
+                  {{ selectedTask()!.isSubmittingForm ? 'Slanje...' : 'Završi zadatak' }}
+                </button>
+              </div>
+            </div>
+
+            <ng-template #teacherFormModal>
+              <div class="task-info-rows" *ngIf="!isTaskType(selectedTask()!, 'task1') && !isTaskType(selectedTask()!, 'task2') && !isTaskType(selectedTask()!, 'task3')">
+                <div class="task-info-row">
+                  <span class="task-info-label">Naziv zadatka</span>
+                  <span class="task-info-value">{{ translateTaskName(selectedTask()!.name) }}</span>
+                </div>
+                <div class="task-info-row">
+                  <span class="task-info-label">Dodeljen</span>
+                  <span class="task-info-value">{{ selectedTask()!.claimedBy || '—' }}</span>
+                </div>
+                <div class="task-info-row">
+                  <span class="task-info-label">Vreme pokretanja</span>
+                  <span class="task-info-value">{{ selectedTask()!.created ? (selectedTask()!.created | date:'dd.MM.yyyy HH:mm') : '—' }}</span>
+                </div>
+                <div class="task-info-row">
+                  <span class="task-info-label">Status</span>
+                  <span class="task-info-value">{{ translateStatus(selectedTask()!.status) }}</span>
+                </div>
+              </div>
+
+              <div *ngIf="isAdmin && (isTaskType(selectedTask()!, 'task1') || isTaskType(selectedTask()!, 'task3'))" class="file-upload-row">
+                <label class="file-label">Priložite datoteku:</label>
+                <input type="file" (change)="onFileSelected(selectedTask()!, $event)" />
+                <div class="selected-file" *ngIf="selectedTask()!.uploadedFile">{{ selectedTask()!.uploadedFile!.name }}</div>
+              </div>
+
+              <div *ngIf="isTaskType(selectedTask()!, 'task2')" class="task2-inputs">
+                <div class="task-info-row">
+                  <span class="task-info-label">Bodovi</span>
+                  <input type="number" min="0" [(ngModel)]="$any(selectedTask()!.formInput)['points']" />
+                </div>
+                <div class="task-info-row">
+                  <span class="task-info-label">Komentar</span>
+                  <textarea rows="3" [(ngModel)]="$any(selectedTask()!.formInput)['comment']" placeholder="Unesite komentar..."></textarea>
+                </div>
+                <div class="task-info-row">
+                  <span class="task-info-label">Email studenta</span>
+                  <input type="text" [(ngModel)]="$any(selectedTask()!.formInput)['email']" placeholder="Unesite email studenta..." />
+                </div>
+              </div>
+
+              <div class="form-footer">
+                <button type="button" class="btn-cancel" (click)="cancelForm(selectedTask()!)" [disabled]="selectedTask()!.isSubmittingForm ?? false">Otkaži</button>
+                <button type="button" class="btn-complete"
+                  (click)="isAdmin && (isTaskType(selectedTask()!, 'task1') || isTaskType(selectedTask()!, 'task3')) ? completeTask1(selectedTask()!) : completeTask2(selectedTask()!)"
+                  [disabled]="(selectedTask()!.isSubmittingForm ?? false) || isTeacherRestrictedTask(selectedTask()!) || (isAdmin && (isTaskType(selectedTask()!, 'task1') || isTaskType(selectedTask()!, 'task3')) && !selectedTask()!.uploadedFile)">
+                  {{ selectedTask()!.isSubmittingForm ? 'Slanje...' : 'Završi zadatak' }}
+                </button>
+              </div>
+            </ng-template>
+          </div>
+        </ng-container>
+      </div>
+
+      <div class="modal-footer-close">
+        <button class="btn-close-modal" (click)="closeHistoryModal()">Zatvori</button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!isLoading && assignedTasks.length === 0" class="empty-state">
+    <div class="empty-icon">📭</div>
+    <h3>Nema dodeljenih zadataka</h3>
+    <p>Trenutno nema zadataka koji su vam dodeljeni. Pokušajte kasnije.</p>
+  </div>
+</div>

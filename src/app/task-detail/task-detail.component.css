@@ -1,0 +1,24 @@
+.task-detail-container {
+  max-width: 780px;
+  margin: 32px auto;
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+}
+
+.btn-back {
+  background: transparent;
+  border: none;
+  color: #b91230;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.history-item { margin: 10px 0; }
+.data-item { padding: 8px; background: #fff8f8; border-radius: 6px; border: 1px solid #f0d0d4; margin-bottom: 6px; }
+.data-key { font-weight: 700; color: #b91230; min-width: 120px; display: inline-block; }
+
+.loading-spinner { text-align: center; padding: 40px; color: #bbb; }
+.error-message { color: #fff; background: #b91230; padding: 12px; border-radius: 8px; }
